@@ -1,0 +1,13 @@
+#REQUETE
+
+int32 starting_index
+int32 ending_index
+int32[] grid
+int32 nb_cols
+int32 nb_lines
+
+---
+
+#REPONSE
+
+int32[] path
