@@ -1,117 +1,102 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <memory>
 #include <vector>
 #include <mutex>
 #include <thread>
-#include <memory>
 
 
-class  Filter{
-
+class Filter {
     public:
-        virtual void apply_filter(cv::Mat& image) = 0;
-        
-        virtual ~Filter() = default;
+        virtual void apply_filter(cv::Mat& image) =0;
 
+        virtual ~Filter() = default;
 };
 
-class GaussianFilter : public Filter {
-    public:
-
-    cv::Size Size;
+class GaussianFilter : public Filter{
+    public :
+        cv::Size Size;
 
         GaussianFilter(cv::Size Size){
             this->Size = Size;
-        };
-
-        void apply_filter(cv::Mat& image) override{
-            cv::GaussianBlur(image,image,Size,0);
-            std::cout << "Gaussian blur applied" << std::endl;
         }
+        void apply_filter(cv::Mat& image) override {
+            cv::GaussianBlur(image,image,Size,0);
+            std::cout << "Applied Gaussian Filter" << std::endl;
+        }
+
 };
 
-
-class CannyFilter : public Filter {
+class CannyFilter : public Filter{
     public:
 
-       int threshold_down = 50;
-       int treshold_up = 150;
+        int treshold_down = 50;
+        int treshold_up = 150;
 
-        CannyFilter(int threshold_down, int treshold_up){
-            this->threshold_down = threshold_down;
+        CannyFilter(const int& treshold_down, const int& threshold_up){
+            this->treshold_down = treshold_down;
             this->treshold_up = treshold_up;
         }
-    
-        void apply_filter(cv::Mat& image) override {
-            cv::Mat blur_image;
-            cv::GaussianBlur(image,blur_image,cv::Size(5,5),0);
-            cv::Canny(blur_image, image, threshold_down,treshold_up);
-            std::cout << "Canny filter applied" << std::endl;
 
-        }
+        void apply_filter(cv::Mat& image) override {
+            cv::Canny(image, image, treshold_down, treshold_up);
+            std::cout << "Applied Gaussian Filter" << std::endl;
+    }
 };
 
-
-std::vector<std::unique_ptr<Filter>> filter_list;
-
-
-        
-
-std::mutex mutex_capture;
-
-std::thread thread_capture_image;
-std::thread thread_apply_filter;
-
-cv::Mat image_being_treated;
+std::mutex capture_mutex;
 
 cv::VideoCapture cap(0);
 
-cv::Mat image_temporaire;
-cv::Mat image_captured;
 
-void ThreadCapture(){
-while (true){
+cv::Mat image_being_read;
+cv::Mat image_passation;
+cv::Mat image_being_treated;
+std::vector<std::unique_ptr<Filter>> filter_list;
 
-    cap >> image_temporaire; // on part du principe que c'est sur le port 0 quon a un flux
-    if (!image_temporaire.empty()){
-        std::lock_guard lock(mutex_capture);
-        image_captured = image_temporaire.clone();
+
+void thread_read_image(){
+
+    while(1){
+
+        cap >> image_being_read;
+
+        if (!image_being_read.empty()){
+            std::lock_guard lock(capture_mutex);
+            cv::swap(image_passation,image_being_read);
+        }
     }
-
-
 }
-}
-void ThreadApplyFilter(){
-    filter_list.push_back(std::make_unique<CannyFilter>(50, 150));
+
+void thread_apply_filter(){
+
     filter_list.push_back(std::make_unique<GaussianFilter>(cv::Size(5,5)));
+    filter_list.push_back(std::make_unique<CannyFilter>(50,150));
 
-    while(true){
+    while(1){
+        bool newdata = false;
         {
-        std::lock_guard lock(mutex_capture);
-        if (!image_captured.empty()){
-            //on bloque l'accès à un autre thread tant que on a pas sauvegardé l'image la plus récente capturée
-            
-            image_being_treated = image_captured.clone();
+        std::lock_guard lock(capture_mutex); 
+        if(!image_passation.empty()){
+            newdata = true;
+            cv::swap(image_being_treated,image_passation);
             }
-    }
-    if (!image_being_treated.empty()){
+        }
+        if((!image_being_treated.empty()) && newdata == true){
+
         for (auto& filter : filter_list){
             filter->apply_filter(image_being_treated);
-            
         }
-        cv::imshow("Flux Robotique", image_being_treated);
+        cv::imshow("image traitée", image_being_treated);
+        }
         cv::waitKey(1);
-       }
-}
+
+    }
 }
 
 int main(){
-
-    std::thread thread_capture_image(ThreadCapture);
-    std::thread thread_apply_filter(ThreadApplyFilter);
-
-    thread_capture_image.join();
-    thread_apply_filter.join();
-
-
+    std::thread Thread_lecture(thread_read_image);
+    std::thread Thread_apply_filter(thread_apply_filter);
+    Thread_lecture.join();
+    Thread_apply_filter.join();
 }
