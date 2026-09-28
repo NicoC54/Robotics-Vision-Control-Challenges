@@ -75,7 +75,7 @@ while (true){
     cap >> image_temporaire; // on part du principe que c'est sur le port 0 quon a un flux
     if (!image_temporaire.empty()){
         std::lock_guard lock(mutex_capture);
-        image_captured = image_temporaire;
+        image_captured = image_temporaire.clone();
     }
 
 
