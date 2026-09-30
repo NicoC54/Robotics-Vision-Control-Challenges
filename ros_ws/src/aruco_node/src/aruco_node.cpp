@@ -14,9 +14,15 @@ class PoseEstimator : public rclcpp::Node{
 
         PoseEstimator() : Node("PoseEstimator"){
 
-            this->size = 0.1;
-            this->dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+            this->declare_parameter<double>("marker_size", 0.1);
+            this->declare_parameter<int>("dict_id", cv::aruco::DICT_4X4_50);
 
+            this->size = get_parameter("marker_size").as_double();
+
+            int user_dict_id = this->get_parameter("marker_size").as_double();
+
+            this->dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+            
             tf_broadcaster_ = std::make_shared<tf2_ros::TransformPublisher>(this);
             subscriber_ = this->create_subscription("camera/image",10, [this](const shared_ptr<sensors_msgs::msg::Image> PtrRosImageMsg){this->callback_broadcaster(PtrRosImageMsg);});
         }
@@ -77,7 +83,7 @@ class PoseEstimator : public rclcpp::Node{
                 }
 
             }
-            
+
         private:
 
 
