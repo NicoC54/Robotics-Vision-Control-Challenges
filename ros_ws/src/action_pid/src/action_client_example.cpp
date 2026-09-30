@@ -47,20 +47,22 @@ class ClientAction : public rclcpp::Node{
                     }
 
                     else{
-                        RCLCPP_INFO{this->get_logger(),"Message bien recu et en cours de traitement"};
+                        RCLCPP_INFO(this->get_logger(),"Message bien recu et en cours de traitement");
                     }
                 };
 
             //callback2 : reception du feedback
             send_goal_options.feedback_callback =  [this](std::shared_ptr<rclcpp_action::ClientGoalHandle<pkg_name::action::Struct_name>> goal_handle, const std::shared_ptr<const pkg_name::action::Struct_name::Feedback> feedback){
                 RCLCPP_INFO(this->get_logger(), "Feeback en cours de récéption : %i", feedback->temps_restant);
-            }
+            };
 
-            send_goal_options.result_callback = [this](const rclcpp_action::ClientGoalHandle<pkg_name::action::Struct_name::Feedback>::WrappedResult& enveloppe){
+
+            //callback3
+            send_goal_options.result_callback = [this](const rclcpp_action::ClientGoalHandle<pkg_name::action::Struct_name>::WrappedResult& enveloppe){
 
                 switch (enveloppe.code){
                     case rclcpp_action::ResultCode::SUCCEEDED:
-                         RCLCPP_INFO(this->get_logger(), "Reussite de l'action : %s", enveloppe.result->termine);
+                         RCLCPP_INFO(this->get_logger(), "Reussite de l'action : %s", enveloppe.result->termine ? "VRAI" : "FAUX");
                               break; 
 
                     case rclcpp_action::ResultCode::ABORTED:
@@ -76,9 +78,9 @@ class ClientAction : public rclcpp::Node{
                 }
 
 
-            }
+            };
 
-            client -> async_send_goal(goal_msg, send_goal_options);
+            client_ -> async_send_goal(goal_msg, send_goal_options);
         
 
             }
@@ -88,7 +90,7 @@ class ClientAction : public rclcpp::Node{
 
 int main(int argc, char* argv[]){
     rclcpp::init(argc, argv);
-    rclcpp::spin(<std::make_shared<ClientAction>());
+    rclcpp::spin(std::make_shared<ClientAction>());
     rclcpp::shutdown();
     return 0;
 }
