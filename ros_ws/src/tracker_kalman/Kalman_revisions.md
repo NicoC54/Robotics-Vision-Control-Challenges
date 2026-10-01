@@ -1,4 +1,8 @@
-Voici la fiche de révision complète et compilée au format Markdown. Vous pouvez copier l'intégralité de ce bloc pour vos notes.
+Voici votre fiche de révision complète et corrigée. Elle intègre votre excellente remarque sur le Cas A pour respecter strictement la règle de l'Anti-Doublon !
+
+Vous pouvez copier l'intégralité de ce bloc :
+
+---
 
 # Fiche de Révision : Architecture et Conception d'un Filtre de Kalman
 
@@ -32,7 +36,7 @@ Le vecteur $U$ contient les forces ou commandes connues qui agissent directement
 
 
 * **Le Piège du Remplissage de $Z$ (L'erreur des zéros) :**
-* *L'erreur :* Ajouter des $0$ dans le vecteur d'observation $Z$ pour qu'il fasse la même taille que $X$ (ex: $Z = [x_{mesuré}, y_{mesuré}, 0, 0]^T$ pour matcher $X = [x, y, v_x, v_y]^T$). Cela force le filtre à croire que la vitesse mesurée est de $0$, bloquant l'objet mathématiquement.
+* *L'erreur :* Ajouter des $0$ dans le vecteur d'observation $Z$ pour qu'il fasse la même taille que $X$ (ex: $Z = [x_{mesuré}, y_{mesuré}, 0, 0]^T$ pour matcher $X = [x, y, v_x, v_y]^T$). Cela force le filtre à croire que la vitesse mesurée est $0$, bloquant l'objet mathématiquement.
 * *La règle :* Le vecteur $Z$ contient **strictement** le nombre de valeurs mesurées physiquement. S'il y a 2 capteurs, $Z$ a 2 lignes.
 
 
@@ -41,14 +45,14 @@ Le vecteur $U$ contient les forces ou commandes connues qui agissent directement
 
 
 
-## 4. Architecture Système : $U$ ou $Z$ ? (L'exemple du Rover)
+## 4. Architecture Système : $U$ ou $Z$ ? (L'exemple du Rover qui patine)
 
-Quand on dispose d'un capteur haute fréquence (ex: encodeur de roues, odométrie) qui est sujet à des erreurs violentes (patinage), deux architectures s'affrontent :
+Quand on dispose d'un capteur haute fréquence (ex: encodeur de roues) sujet à des erreurs violentes, deux architectures s'affrontent :
 
 | Stratégie | Méthode | Avantage | Inconvénient |
 | --- | --- | --- | --- |
-| **Risquée (Mécanisation)** | Mettre le capteur dans $U$. Estimer l'erreur dans $X$. | Consomme très peu de CPU, parfait pour les biais lents (gyroscope). | Si l'erreur est soudaine (patinage), le modèle est instantanément corrompu avant que la caméra ne corrige. |
-| **Robuste (Fusion $Z$)** | Poser $U=0$. Mettre le capteur dans $Z$ avec la caméra. | Permet d'ignorer dynamiquement le capteur si une anomalie est détectée (en augmentant son bruit $R$). | Demande un peu plus de calcul matriciel pour le filtre. |
+| **Risquée (Mécanisation)** | Mettre le capteur dans $U$. Estimer l'erreur dans $X$. | Consomme très peu de CPU, parfait pour les biais lents (gyroscope). | Si l'erreur est soudaine (patinage), le modèle est instantanément corrompu. |
+| **Robuste (Fusion $Z$)** | Poser $U=0$. Mettre le capteur dans $Z$ avec la caméra. | Permet d'ignorer dynamiquement le capteur si une anomalie est détectée. | Demande un peu plus de calcul matriciel pour le filtre. |
 
 ## 5. Mémo ROS 2 : Pipeline Zero-Copy & OpenCV
 
@@ -65,63 +69,60 @@ Quand on dispose d'un capteur haute fréquence (ex: encodeur de roues, odométri
 
 ## 6. Cas Pratiques : Architectures Classiques en Robotique
 
-Voici les *design patterns* (modèles d'architecture) les plus courants dans l'industrie pour choisir $X$ et $U$.
+### 🤖 Cas A : Le Robot Mobile Différentiel (Architecture Standard ROS 2)
 
-### 🤖 Cas A : Le Robot Mobile Différentiel (Aspirateur autonome, TurtleBot)
-
-* **L'objectif :** Suivre la position $(x, y)$ et le cap $(\theta)$ du robot sur une carte 2D.
+* **L'objectif :** Suivre la position $(x, y)$ et le cap $(\theta)$ du robot.
 * **Le vecteur d'état $X$ :** $[x, y, \theta, v, \omega]^T$
 *(Position X, Position Y, Cap, Vitesse linéaire, Vitesse de rotation).*
-* **La commande $U$ :** $[v_{cmd}, \omega_{cmd}]^T$ (Les consignes envoyées aux moteurs).
+* **La commande $U$ :** $[0, 0]^T$ (Vecteur nul).
 * **Pourquoi ?**
-* *Le Curseur :* On veut $[x, y, \theta]$, on monte d'un cran en ajoutant les vitesses $[v, \omega]$ car la cinématique d'un robot à roues les lie mathématiquement.
-* *Le Choix de U :* On pilote le robot ! L'ordinateur connaît exactement les commandes qu'il envoie aux contrôleurs des moteurs. On utilise donc ces commandes comme "force motrice" dans $U$ pour prédire la nouvelle position, tandis que le Lidar ou la caméra corrigeront dans $Z$.
+* *Le Curseur :* On veut $[x, y, \theta]$, on monte d'un cran en ajoutant les vitesses réelles $[v, \omega]$.
+* *La stratégie Z (Anti-Doublon respecté) :* Au lieu d'imposer brutalement les commandes des roues dans $U$ (ce qui entrerait en conflit mathématique avec les vitesses de $X$), on pose $U=0$. On injecte la vitesse mesurée par les roues (odométrie) **dans Z** (en même temps que le GPS ou le Lidar). Le filtre peut ainsi lisser le patinage des roues en toute sécurité.
 
 
 
 ### 🏭 Cas B : Le Bras Robotique Industriel (Axe par axe)
 
-* **L'objectif :** Contrôler l'angle exact d'une articulation lourde (ex: coude du robot soudeur) avec une fluidité parfaite pour ne pas casser la mécanique.
+* **L'objectif :** Contrôler l'angle exact d'une articulation lourde avec une fluidité parfaite pour ne pas casser la mécanique.
 * **Le vecteur d'état $X$ :** $[\theta, \omega, \alpha]^T$
 *(Angle, Vitesse angulaire, Accélération angulaire).*
 * **La commande $U$ :** $[Jerk_{cmd}]$ (La commande de secousse envoyée au variateur industriel).
 * **Pourquoi ?**
-* *Le Choix de U :* Dans l'industrie lourde, on ne commande jamais un moteur brutalement en vitesse (pour éviter les à-coups). On envoie une consigne de *Jerk* (la dérivée de l'accélération).
-* *Le Curseur :* Puisque $U = Jerk$, on doit remplir le vecteur $X$ avec toutes les dérivées inférieures jusqu'à notre objectif final (l'Angle $\theta$). D'où le trio Angle/Vitesse/Accélération.
+* *Le Choix de U :* Dans l'industrie lourde, on commande les moteurs en *Jerk* (dérivée de l'accélération) pour éviter les à-coups.
+* *Le Curseur :* Puisque $U = Jerk$, on remplit le vecteur $X$ avec toutes les dérivées inférieures jusqu'à notre objectif final (l'Angle $\theta$).
 
 
 
 ### 🚁 Cas C : Le Drone FPV (Stabilisation de l'Attitude)
 
-* **L'objectif :** Connaître l'inclinaison 3D exacte du drone (Roulis $\phi$, Tangage $\theta$, Lacet $\psi$) sans que l'horizon artificiel ne dérive.
+* **L'objectif :** Connaître l'inclinaison 3D exacte du drone sans que l'horizon artificiel ne dérive.
 * **Le vecteur d'état $X$ :** $[\phi, \theta, \psi, \text{Biais}_x, \text{Biais}_y, \text{Biais}_z]^T$
 *(Les 3 angles, et les 3 erreurs du gyroscope).*
-* **La commande $U$ :** $[\omega_x, \omega_y, \omega_z]^T$ (Les 3 vitesses angulaires lues par le gyroscope à 1000 Hz).
+* **La commande $U$ :** $[\omega_x, \omega_y, \omega_z]^T$ (Les vitesses angulaires lues par le gyroscope à 1000 Hz).
 * **Pourquoi ?**
-* *Le Choix de U :* C'est l'architecture **Error-State (ESKF)**. Le capteur inertiel (gyroscope) est tellement rapide qu'on s'en sert comme "moteur de prédiction" dans $U$.
+* *Le Choix de U :* C'est l'architecture **Error-State (ESKF)**. Le gyroscope est si rapide qu'on l'utilise comme "moteur de prédiction" dans $U$.
 * *L'Anti-Doublon :* Puisque la vitesse angulaire est dans $U$, on **n'a pas le droit** de la mettre dans $X$.
-* *La parade :* À la place, on demande au Kalman d'estimer les *Biais* (défauts de fabrication du capteur) dans $X$. L'accéléromètre (qui regarde la gravité terrestre) servira de juge dans $Z$ pour corriger ces biais.
+* *La parade :* À la place, on demande au Kalman d'estimer les *Biais* (défauts du capteur) dans $X$. L'accéléromètre sert de juge dans $Z$ pour corriger ces biais.
 
 
 
 ### 🎯 Cas D : La Tourelle de Ciblage (Suivi de cible externe)
 
-* **L'objectif :** Suivre un drone ennemi ou une balle de tennis en vol pour orienter une caméra vers lui.
+* **L'objectif :** Suivre un drone ennemi en vol pour orienter une caméra vers lui.
 * **Le vecteur d'état $X$ :** $[x, y, z, v_x, v_y, v_z]^T$
 *(Position 3D et Vitesse 3D).*
 * **La commande $U$ :** $0$ (Vecteur nul).
 * **Pourquoi ?**
-* *Le Choix de U :* L'objet ciblé est indépendant. Nous n'avons pas accès à son ordinateur de bord ni à ses capteurs. Il est donc impossible de remplir $U$.
-* *La stratégie :* On pose $U=0$ (Modèle à vitesse constante). C'est le bruit de processus (la Matrice $Q$) qui absorbera les accélérations surprises de la cible, et la mesure (Radar/Caméra dans $Z$) qui recadrera la prédiction.
+* *Le Choix de U :* L'objet ciblé est indépendant, on ne connaît pas ses commandes. On pose $U=0$ (modèle à vitesse constante). La matrice de bruit de processus ($Q$) absorbera les accélérations surprises de la cible, et la mesure (Radar/Caméra dans $Z$) recadrera la prédiction.
 
 
 
 ### 🚗 Cas E : Le Régulateur de Vitesse Adaptatif (Voiture sur autoroute)
 
-* **L'objectif :** Maintenir une distance de sécurité avec la voiture de devant, sans freiner ni accélérer de façon saccadée.
+* **L'objectif :** Maintenir une distance de sécurité avec la voiture de devant, sans saccades.
 * **Le vecteur d'état $X$ :** $[\text{Distance}, v_{relative}, a_{relative}]^T$
-*(Distance qui nous sépare, Vitesse relative, Accélération relative).*
-* **La commande $U$ :** $[0]$ (Ou l'accélération de notre propre voiture si on la connaît très précisément).
+*(Distance, Vitesse relative, Accélération relative).*
+* **La commande $U$ :** $[0]$.
 * **Pourquoi ?**
-* *L'optimisation :* La position absolue sur la Terre (GPS) n'a aucune importance ici. On conçoit un vecteur d'état purement **relatif**.
-* *Le Curseur :* On met l'accélération relative dans $X$ car une voiture devant nous met du temps à freiner (inertie). Avoir la composante $a_{relative}$ permet au filtre de voir que la voiture de devant *commence* à freiner avant même que la distance ne se réduise dangereusement. Le Radar de pare-choc ira dans $Z$.
+* *L'optimisation :* La position absolue sur la Terre (GPS) n'a aucune importance, on utilise un modèle purement **relatif**.
+* *Le Curseur :* On intègre l'accélération relative $a_{relative}$ dans $X$ car cela permet au filtre d'anticiper le freinage (inertie) de la voiture de devant avant même que la distance ne se réduise. Le radar de pare-chocs corrige le tout dans $Z$.
