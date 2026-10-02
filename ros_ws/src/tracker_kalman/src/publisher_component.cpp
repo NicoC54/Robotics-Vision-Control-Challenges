@@ -10,6 +10,11 @@ class Publisher : public rclcpp::Node {
 public:
     // 2. Le constructeur accepte et transmet les NodeOptions
     explicit Publisher(const rclcpp::NodeOptions & options) : Node("publisher", options), cap(0) {
+
+        if (!cap(0).is_opened()){
+            RCLCPP_ERROR(this->get_logger(), "Erreur : Impossible d'ouvrir la caméra (index 0) !")
+        }
+
         rclcpp::QoS custom_qos(10);
         custom_qos.reliability(rclcpp::ReliabilityPolicy::BestEffort);
         custom_qos.durability(rclcpp::DurabilityPolicy::Volatile);
@@ -42,7 +47,6 @@ private:
     }
 };
 
-} // namespace my_camera_package
+} 
 
-// 3. Enregistrement macro du composant (Hors de la classe)
-RCLCPP_COMPONENTS_REGISTER_NODE(my_camera_package::Publisher)
+RCLCPP_COMPONENT_REGISTER_NODE(my_camera_package::Publisher)
