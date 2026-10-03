@@ -1,0 +1,11 @@
+# 1. THE GOAL (Ce que le client demande)
+# Le nom de la cible à suivre (même s'il est pour l'instant forcé à "cible" dans votre code)
+string target_frame
+---
+# 2. THE RESULT (Ce que le serveur renvoie à la toute fin)
+# Vrai si l'action s'est terminée correctement, Faux si elle a été annulée ou a échouée
+bool terminated
+---
+# 3. THE FEEDBACK (Ce que le serveur publie en continu)
+# La correction de vitesse calculée par le PID
+float64 vitesse

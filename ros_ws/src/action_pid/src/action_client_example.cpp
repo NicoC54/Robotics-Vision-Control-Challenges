@@ -1,96 +1,71 @@
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
-#include <memory>
-#include "package_name/action/Struct_name"
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include "action_pid/action/follow_target.hpp"
 
+class ClientAction : public rclcpp::Node {
+public:
+    using FollowAction = action_pid::action::FollowTarget;
+    using GoalHandleFollow = rclcpp_action::ClientGoalHandle<FollowAction>;
 
+    ClientAction() : Node("action_client_example") {
+        client_ = rclcpp_action::create_client<FollowAction>(this, "canal_action");
+    }
 
-class ClientAction : public rclcpp::Node{
-    public:
-
-        ClientAction () : Node("ClientAction"){
-
-            client_ = rclcpp_action::create_client<pkg_name::action::Struct_name>(this, "canal_action");
-            timer_ = this -> create_wall_timer(std::chrono::milliseconds(500),[this](){this->sendGoal();});
+    void sendGoal() {
+        if (!client_->wait_for_action_server(std::chrono::seconds(10))) {
+            RCLCPP_ERROR(this->get_logger(), "Serveur d'action introuvable après 10 secondes.");
+            return;
         }
 
+        auto goal_msg = FollowAction::Goal();
+        goal_msg.target_frame = "cible";
 
-    private:
+        typename rclcpp_action::Client<FollowAction>::SendGoalOptions send_goal_options;
 
-        std::shared_ptr<rclcpp_action::Client<pkg_name::action::Struct_name>> client_;
-        std::shared_ptr<rclcpp::TimerBase> timer_;
-
-
-        void sendGoal(){
-
-            this->timer_->cancel();
-
-            if (!client_->wait_for_action_server(std::chrono::seconds(10))){
-                RCLCPP_ERROR(this->get_logger(),"Erreur survenue, serveur d'action injoignable");
-                return;
+        send_goal_options.goal_response_callback = [this](const std::shared_ptr<GoalHandleFollow> goal_handle) {
+            if (!goal_handle) {
+                RCLCPP_ERROR(this->get_logger(), "Objectif rejeté par le serveur.");
+            } else {
+                RCLCPP_INFO(this->get_logger(), "Objectif accepté par le serveur.");
             }
-
-
-
-
-            pkg_name::action::Struct_name::Goal goal_msg;
-            goal_msg.depart = 5;
-
-
-            rclcpp_action::Client<pkg_name::action::Struct_name>::SendGoalOptions send_goal_options;
-
-            //callback 1 : retour du goal response
-
-            send_goal_options.goal_response_callback = [this](std::shared_ptr<rclcpp_action::ClientGoalHandle<pkg_name::action::Struct_name>> goal_handle){
-                    if (!goal_handle){
-                        RCLCPP_ERROR(this->get_logger(),"Erreur survenue, serveur d'action injoignable");
-                    }
-
-                    else{
-                        RCLCPP_INFO(this->get_logger(),"Message bien recu et en cours de traitement");
-                    }
-                };
-
-            //callback2 : reception du feedback
-            send_goal_options.feedback_callback =  [this](std::shared_ptr<rclcpp_action::ClientGoalHandle<pkg_name::action::Struct_name>> goal_handle, const std::shared_ptr<const pkg_name::action::Struct_name::Feedback> feedback){
-                RCLCPP_INFO(this->get_logger(), "Feeback en cours de récéption : %i", feedback->temps_restant);
-            };
-
-
-            //callback3
-            send_goal_options.result_callback = [this](const rclcpp_action::ClientGoalHandle<pkg_name::action::Struct_name>::WrappedResult& enveloppe){
-
-                switch (enveloppe.code){
-                    case rclcpp_action::ResultCode::SUCCEEDED:
-                         RCLCPP_INFO(this->get_logger(), "Reussite de l'action : %s", enveloppe.result->termine ? "VRAI" : "FAUX");
-                              break; 
-
-                    case rclcpp_action::ResultCode::ABORTED:
-                        RCLCPP_INFO(this->get_logger(), "Echec du goal");
-                             break; 
-
-                    case rclcpp_action::ResultCode::CANCELED:
-                        RCLCPP_INFO(this->get_logger(), "Annulation de l'action");
-                             break; 
-                    default:
-                        RCLCPP_INFO(this->get_logger(), "fin inconnue");
-                             break; 
-                }
-
-
-            };
-
-            client_ -> async_send_goal(goal_msg, send_goal_options);
-        
-
-            }
-
-
         };
 
-int main(int argc, char* argv[]){
+        send_goal_options.feedback_callback = [this](
+            GoalHandleFollow::SharedPtr,
+            const std::shared_ptr<const FollowAction::Feedback> feedback) {
+            RCLCPP_INFO(this->get_logger(), "Feedback reçu - Vitesse moteur : %f", feedback->vitesse);
+        };
+
+        send_goal_options.result_callback = [this](const GoalHandleFollow::WrappedResult& result) {
+            switch (result.code) {
+                case rclcpp_action::ResultCode::SUCCEEDED:
+                    RCLCPP_INFO(this->get_logger(), "Action réussie !");
+                    break;
+                case rclcpp_action::ResultCode::ABORTED:
+                    RCLCPP_ERROR(this->get_logger(), "Action abandonnée (perte de cible).");
+                    break;
+                case rclcpp_action::ResultCode::CANCELED:
+                    RCLCPP_ERROR(this->get_logger(), "Action annulée.");
+                    break;
+                default:
+                    RCLCPP_ERROR(this->get_logger(), "Code de résultat inconnu.");
+                    break;
+            }
+            rclcpp::shutdown();
+        };
+
+        client_->async_send_goal(goal_msg, send_goal_options);
+    }
+
+private:
+    rclcpp_action::Client<FollowAction>::SharedPtr client_;
+};
+
+int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<ClientAction>());
+    auto node = std::make_shared<ClientAction>();
+    node->sendGoal();
+    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }
