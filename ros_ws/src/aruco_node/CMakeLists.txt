@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(aruco_pose_estimator)
+project(aruco_node)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -18,7 +18,7 @@ find_package(tf2_ros REQUIRED)
 find_package(OpenCV REQUIRED)
 
 # 3. Création de l'exécutable (ton noeud)
-add_executable(pose_estimator_node src/pose_estimator.cpp)
+add_executable(pose_estimator_node src/aruco_node.cpp)
 
 # 4. Ajout des dossiers d'en-tête (headers) d'OpenCV
 target_include_directories(pose_estimator_node PRIVATE ${OpenCV_INCLUDE_DIRS})
