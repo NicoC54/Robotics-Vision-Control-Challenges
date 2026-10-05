@@ -1,50 +1,35 @@
-# 🚀 LES 5 EXERCICES ULTIMES (Du plus simple au plus difficile)
+# 🚀 THE ULTIMATE 5 ROBOTICS PROJECTS PORTFOLIO
 
-## Niveau 1 : Le Pipeline de Perception (C++ Pur, Threading & Polymorphisme)
+*From Beginner C++ Architecture to Senior ROS 2 Distributed Systems*
 
-*Le classique pour tester votre code C++ et votre gestion mémoire bas niveau.*
+## Level 1: The Multi-Threaded Perception Pipeline
 
-* **Objectif :** Concevoir le cœur logiciel (hors ROS) d'une caméra. Le programme doit capturer des images en boucle continue. En parallèle, il doit appliquer une séquence de filtres d'image (ex : Flou Gaussien, puis Canny). Le système de filtrage doit être "Plug & Play" (on peut ajouter de nouveaux algorithmes sans toucher au cœur du code).
-* **Le Piège d'Entretien (100% de chances de tomber) :** La `cv::Mat` est un pointeur déguisé (Shallow Copy). Si le thread de capture écrase l'image pendant que le thread de traitement la lit, le programme crash (Data Race). De plus, si vous bloquez le Mutex trop longtemps, vos FPS tombent à zéro.
+* **Tech Stack:** C++17, OpenCV, `std::thread`, `std::mutex`, Factory/Plugin Pattern.
+* **Project Objective:** Build a standalone, high-performance camera perception core that continuously captures frames while concurrently applying a modular, plug-and-play image processing pipeline (e.g., Gaussian Blur followed by Canny Edge Detection). New filters can be added seamlessly without touching core architecture.
+* **Engineering Challenge Solved:** Handled `cv::Mat` shallow-copy mechanics to prevent **Data Races** between capture and processing threads, carefully balancing critical sections to maintain high FPS without lock contention.
 
----
+## Level 2: The Optimized A* Path Planner
 
-## Niveau 2 : Le Planificateur A* (C++ STL, Big O & ROS 2 Services)
+* **Tech Stack:** C++ STL, ROS 2 Services, Graph Algorithms.
+* **Objective:** Design a ROS 2 Service node (`GetPath`) that accepts an occupancy grid, start pose, and goal pose, computes the optimal collision-free trajectory using the A* algorithm, and returns the sorted waypoint list.
+* **Engineering Challenge Solved:** Optimized algorithmic performance by replacing inefficient linear searches with `std::priority_queue`, achieving $O(\log n)$ extraction complexity and avoiding the classic interview trap of using `std::vector` with `std::sort` inside the loop.
 
-*Le test algorithmique parfait pour vérifier si vous savez optimiser votre code.*
+## Level 3: The Trajectory Tracking Controller
 
-* **Objectif :** Créer un nœud ROS 2 qui expose un Service `GetPath`. Le client envoie une grille 2D (occupancy grid), un point A et un point B. Le nœud calcule le chemin le plus court en évitant les obstacles en utilisant l'algorithme A* (A-Star), puis renvoie la liste des coordonnées.
-* **Le Piège d'Entretien (100% de chances de tomber) :** L'usage de conteneurs inappropriés. Si vous utilisez un `std::vector` que vous triez (`std::sort`) à chaque itération pour trouver le nœud le moins coûteux, l'algorithme sera affreusement lent. Le recruteur attend une structure STL très spécifique avec une complexité d'extraction en $O(1)$ ou $O(\log n)$.
+* **Tech Stack:** ROS 2 Actions, TF2 Transformation Tree, Control Systems (PID).
+* **Objective:** Develop a mobile robot Action Server for target tracking ("Follow Object X"). The node queries the TF2 tree to compute relative distances and runs a robust PID controller to generate velocity commands (`cmd_vel`) with real-time feedback and preemption/cancellation handling.
+* **Engineering Challenge Solved:** Mitigated **Integral Windup** (preventing error accumulation during actuator stalls) and protected the ROS 2 executor callback queue from blocking loops.
 
----
+## Level 4: The 3D Pose Estimator
 
-## Niveau 3 : Le Contrôleur de Poursuite (ROS 2 Actions, PID & TF2 Listener)
+* **Tech Stack:** ROS 2, OpenCV (`solvePnP`), TF2 Broadcaster, Quaternions.
+* **Objective:** Implement a computer vision node that detects ArUco markers, computes 3D translation and rotation vectors via camera intrinsics and `solvePnP`, and broadcasts the spatial pose dynamically across the ROS 2 transform network.
+* **Engineering Challenge Solved:** Prevented **Gimbal Lock** and rotation ambiguities by strictly avoiding Euler angles (Roll/Pitch/Yaw) in favor of mathematical unit quaternions for TF2 publishing.
 
-*La liaison entre l'architecture asynchrone ROS 2 et l'automatique.*
+## Level 5 (Boss Level): The Zero-Copy State Estimator
 
-* **Objectif :** Développer un Action Server ROS 2 pour un robot mobile. L'objectif reçu est "Suivre l'objet X". Le nœud doit écouter en permanence l'arbre TF2 pour connaître la distance entre le `base_link` du robot et la cible. Il utilise un régulateur PID pour calculer la vitesse (`cmd_vel`) à envoyer aux roues. Il renvoie la distance restante en Feedback, et s'arrête si la cible est perdue (annulation).
-* **Le Piège d'Entretien (100% de chances de tomber) :**
-* *L'Integral Windup :* Si les roues du robot sont bloquées, l'erreur s'accumule dans le 'I' du PID. Quand on le débloque, il part à une vitesse folle. Comment le coder ?
-* *L'Executor bloqué :* Si votre boucle PID utilise un bête `while(true)` ou `rclcpp::sleep()`, l'Action Server va bloquer le Callback Queue et le robot crashera.
-
-
-
----
-
-## Niveau 4 : L'Estimateur de Pose 3D (OpenCV, TF2 Broadcaster, Quaternions)
-
-*Le cœur de la vision robotique spatiale.*
-
-* **Objectif :** Un nœud reçoit une image caméra. Vous détectez un marqueur ArUco (OpenCV), vous utilisez la matrice intrinsèque pour calculer sa pose 3D (Translation + Rotation) via `solvePnP`. Enfin, vous publiez cette pose dans le réseau ROS 2 pour que le reste du robot sache où se trouve la cible.
-* **Le Piège d'Entretien (100% de chances de tomber) :** L'algorithme `solvePnP` renvoie un vecteur de rotation (Rodrigues). Pourquoi ne pas utiliser les Angles d'Euler (Roll/Pitch/Yaw) pour publier le TF2 ? C'est ici que vous devez expliquer le Gimbal Lock et appliquer mathématiquement vos Quaternions.
+* **Tech Stack:** ROS 2 (Compositing, Intra-process Communication, QoS), OpenCV, Linear Kalman Filter.
+* **Objective:** Architect two Component Nodes running within a single process. Node 1 publishes camera frames (`SensorData` QoS). Node 2 subscribes via **Zero-Copy** memory sharing, extracts noisy object coordinates, and filters them through a linear Kalman Filter to predict true states and suppress noise.
+* **Engineering Challenge Solved:** Managed `toCvShare` memory safety constraints to prevent cross-node memory corruption and resolved complex **QoS profile mismatches** (`Reliable` vs `Best Effort`) that cause silent communication blackouts.
 
 ---
-
-## Niveau 5 (Boss) : L'Estimateur d'État Zero-Copy (Kalman, QoS, Intra-process)
-
-*L'exercice Senior. Si vous réussissez ça, vous êtes embauché.*
-
-* **Objectif :** Concevoir deux Component Nodes tournant sur le même processus. Le premier lit la caméra (Publisher profil QoS `SensorData`). Le second s'y abonne, lit l'image en Zero-Copy (sans dupliquer la RAM), extrait la position (X, Y) d'un objet bruité, et passe ces mesures dans un Filtre de Kalman (KF) linéaire pour prédire la position réelle et ignorer le bruit.
-* **Le Piège d'Entretien (100% de chances de tomber) :**
-* *`toCvShare` vs `toCvCopy` :* Si vous modifiez l'image après un `toCvShare`, vous corrompez la mémoire de tous les autres nœuds.
-* *Les conflits QoS :* Si le subscriber est configuré en Reliable et le publisher en Best Effort, les deux nœuds ne communiqueront jamais (silence radio sans message d'erreur).
