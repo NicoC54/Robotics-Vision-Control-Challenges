@@ -1,4 +1,4 @@
-# 🚀 Robotics, Vision & Control: The 5 Ultimate Technical Challenges
+# Robotics, Vision & Control: 5 C++ / ROS 2 Challenges
 
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=flat&logo=c%2B%2B&logoColor=white)
 ![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-22314E?style=flat&logo=ros&logoColor=white)
@@ -6,9 +6,16 @@
 ![Eigen](https://img.shields.io/badge/Math-Eigen3-red?style=flat)
 ![Status](https://img.shields.io/badge/Status-Completed-success?style=flat)
 
-This repository contains my C++ / ROS 2 / OpenCV implementations of five advanced robotics challenges. 
+![Five challenges: camera pipeline, A* planner, PID pursuit, ArUco 3D pose, Kalman tracker](media/cover.png)
 
-More than just basic tutorials, these exercises are designed to tackle common pitfalls and edge cases encountered in professional robotics software engineering. From low-level memory management and asynchronous architecture to sensor fusion and algorithmic complexity, this workspace proves my ability to write production-ready code.
+*Illustrations generated with the same algorithms and parameters as the code below (Gaussian 5x5 +
+Canny 50/150, 4-connected A* with a Manhattan heuristic, PID 1.0 / 0.1 / 0.01 at 10 Hz, DICT_4X4_50
++ solvePnP, constant-velocity Kalman filter) on example data.*
+
+Five C++ / ROS 2 / OpenCV exercises, each built around one robotics software topic: multithreading
+and memory safety, a planner exposed as a ROS 2 service, an asynchronous control loop as a ROS 2
+action, 3D pose estimation from a camera, and a Kalman filter in composed nodes with zero-copy
+intra-process transport.
 
 ---
 
@@ -20,7 +27,7 @@ mkdir -p ~/ros2_challenges_ws/src
 cd ~/ros2_challenges_ws/src
 
 # Clone the repository
-git clone [https://github.com/NicoC54/Robotics-Vision-Control-Challenges.git](https://github.com/NicoC54/Robotics-Vision-Control-Challenges.git)
+git clone https://github.com/NicoC54/Robotics-Vision-Control-Challenges.git
 
 # Build the workspace
 cd ..
@@ -53,7 +60,7 @@ source install/setup.bash
 
 ### ✅ Level 3: The Pursuit Controller (ROS 2 Actions, PID & TF2)
 
-**Objective:** A ROS 2 Action Server for a mobile robot. Given a "Follow Object X" goal, the server continuously listens to the TF2 tree to compute the distance to the target, applies a PID controller to output `cmd_vel`, and streams the remaining distance as feedback.
+**Objective:** A ROS 2 Action Server for a mobile robot. Given a "Follow Object X" goal, the server continuously listens to the TF2 tree to compute the distance to the target, applies a PID controller to the distance error, and streams the resulting speed command as action feedback.
 
 * **Engineering Focus:** Asynchronous control loops and automatic control theory.
 * **Source Code:** [View action_pid/src](https://github.com/NicoC54/Robotics-Vision-Control-Challenges/tree/main/ros_ws/src/action_pid/src)
@@ -69,7 +76,7 @@ source install/setup.bash
 
 ---
 
-### ✅ Level 5 (Boss): Zero-Copy State Estimator (Kalman Filter, QoS, Intra-process)
+### ✅ Level 5: Zero-Copy State Estimator (Kalman Filter, QoS, Intra-process)
 
 **Objective:** Two ROS 2 Component Nodes (a Publisher and a Subscriber) running in the same process. Node A publishes camera frames. Node B subscribes, reads the image in Zero-Copy mode, extracts a noisy 2D position, and filters it through a Linear Kalman Filter to predict the true state.
 
